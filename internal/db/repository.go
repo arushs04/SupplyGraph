@@ -16,17 +16,20 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// InsertAsset inserts a new asset into the database and returns its generated ID.
-func (r *Repository) InsertAsset(ctx context.Context, asset model.Asset) (string, error) {
+// FindOrCreateAsset reuses an existing asset by (asset_type, source) or creates a new one.
+func (r *Repository) FindOrCreateAsset(ctx context.Context, asset model.Asset) (string, error) {
 	const query = `
 		INSERT INTO assets (name, asset_type, source)
 		VALUES ($1, $2, $3)
+		ON CONFLICT (asset_type, source)
+		DO UPDATE SET
+			name = EXCLUDED.name
 		RETURNING id
 	`
 
 	var id string
 	if err := r.db.QueryRowContext(ctx, query, asset.Name, asset.AssetType, asset.Source).Scan(&id); err != nil {
-		return "", fmt.Errorf("insert asset: %w", err)
+		return "", fmt.Errorf("find or create asset: %w", err)
 	}
 
 	return id, nil
@@ -100,6 +103,29 @@ func (r *Repository) FindOrCreateComponentVersion(
 		componentVersion.Version,
 	).Scan(&id); err != nil {
 		return "", fmt.Errorf("find or create component version: %w", err)
+	}
+
+	return id, nil
+}
+
+// FindOrCreateScanComponentVersion records that a specific scan contains a specific component version.
+func (r *Repository) FindOrCreateScanComponentVersion(
+	ctx context.Context,
+	scanID string,
+	componentVersionID string,
+) (string, error) {
+	const query = `
+		INSERT INTO scan_component_versions (scan_id, component_version_id)
+		VALUES ($1, $2)
+		ON CONFLICT (scan_id, component_version_id)
+		DO UPDATE SET
+			component_version_id = EXCLUDED.component_version_id
+		RETURNING id
+	`
+
+	var id string
+	if err := r.db.QueryRowContext(ctx, query, scanID, componentVersionID).Scan(&id); err != nil {
+		return "", fmt.Errorf("find or create scan component version: %w", err)
 	}
 
 	return id, nil

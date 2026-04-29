@@ -5,7 +5,8 @@ CREATE TABLE assets (
     name TEXT NOT NULL, -- Name of the asset
     asset_type TEXT NOT NULL, -- Type of the asset (local_path or repo_url)
     source TEXT NOT NULL, -- Source of the asset (actual GitHub link, local path)
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (asset_type, source)
 );
 
 CREATE TABLE scans (
@@ -29,4 +30,11 @@ CREATE TABLE component_versions (
     component_id UUID NOT NULL REFERENCES components(id) ON DELETE CASCADE, -- Foreign key to the components table, each version belongs to a component
     version TEXT NOT NULL, -- Version of the component (e.g., 1.0.0)
     UNIQUE (component_id, version) -- Ensure that each component can only have one entry per version
+);
+
+CREATE TABLE scan_component_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scan_id UUID NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+    component_version_id UUID NOT NULL REFERENCES component_versions(id) ON DELETE CASCADE,
+    UNIQUE (scan_id, component_version_id)
 );

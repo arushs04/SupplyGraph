@@ -78,7 +78,7 @@ func main() {
 	}
 
 	// Insert the asset into the database and get its generated ID, which we will use to link the scan to this asset.
-	assetID, err := repo.InsertAsset(ctx, asset)
+	assetID, err := repo.FindOrCreateAsset(ctx, asset)
 	if err != nil {
 		fmt.Printf("error inserting asset: %v\n", err)
 		os.Exit(1)
@@ -105,4 +105,59 @@ func main() {
 
 	fmt.Printf("inserted asset id: %s\n", assetID)
 	fmt.Printf("inserted scan id: %s\n", scanID)
+
+	normalizedProcessed := 0
+	componentPersisted := 0
+	componentVersionPersisted := 0
+	scanMembershipPersisted := 0
+
+	for _, artifact := range doc.Artifacts {
+		normalized, ok, err := syft.NormalizeArtifact(artifact)
+		if err != nil {
+			fmt.Printf("normalize error for %q: %v\n", artifact.Name, err)
+			continue
+		}
+		if !ok {
+			continue
+		}
+
+		componentID, err := repo.FindOrCreateComponent(ctx, normalized.Component)
+		if err != nil {
+			fmt.Printf("error persisting component %q: %v\n", normalized.Component.Name, err)
+			continue
+		}
+
+		normalized.ComponentVersion.ComponentID = componentID
+		componentVersionID, err := repo.FindOrCreateComponentVersion(ctx, normalized.ComponentVersion)
+		if err != nil {
+			fmt.Printf(
+				"error persisting component version %q@%q: %v\n",
+				normalized.Component.Name,
+				normalized.ComponentVersion.Version,
+				err,
+			)
+			continue
+		}
+
+		_, err = repo.FindOrCreateScanComponentVersion(ctx, scanID, componentVersionID)
+		if err != nil {
+			fmt.Printf(
+				"error persisting scan membership for %q@%q: %v\n",
+				normalized.Component.Name,
+				normalized.ComponentVersion.Version,
+				err,
+			)
+			continue
+		}
+
+		normalizedProcessed++
+		componentPersisted++
+		componentVersionPersisted++
+		scanMembershipPersisted++
+	}
+
+	fmt.Printf("normalized artifacts persisted: %d\n", normalizedProcessed)
+	fmt.Printf("component upserts attempted: %d\n", componentPersisted)
+	fmt.Printf("component version upserts attempted: %d\n", componentVersionPersisted)
+	fmt.Printf("scan membership upserts attempted: %d\n", scanMembershipPersisted)
 }

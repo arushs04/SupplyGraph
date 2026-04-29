@@ -130,3 +130,100 @@ func (r *Repository) FindOrCreateScanComponentVersion(
 
 	return id, nil
 }
+
+func (r *Repository) ListScanPackages(ctx context.Context, scanID string) ([]model.ScanPackage, error) {
+	const query = `
+		SELECT
+			cv.id,
+			c.name,
+			c.ecosystem,
+			cv.version,
+			c.purl
+		FROM scan_component_versions scv
+		JOIN component_versions cv ON cv.id = scv.component_version_id
+		JOIN components c ON c.id = cv.component_id
+		WHERE scv.scan_id = $1
+		ORDER BY c.name, cv.version
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, scanID)
+	if err != nil {
+		return nil, fmt.Errorf("list scan packages: %w", err)
+	}
+	defer rows.Close()
+
+	var packages []model.ScanPackage
+	for rows.Next() {
+		var pkg model.ScanPackage
+		if err := rows.Scan(
+			&pkg.ComponentVersionID,
+			&pkg.Name,
+			&pkg.Ecosystem,
+			&pkg.Version,
+			&pkg.PURL,
+		); err != nil {
+			return nil, fmt.Errorf("scan scan package row: %w", err)
+		}
+
+		packages = append(packages, pkg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate scan packages: %w", err)
+	}
+
+	return packages, nil
+}
+
+func (r *Repository) FindOrCreateVulnerability(ctx context.Context, vulnerability model.Vulnerability) (string, error) {
+	const query = `
+		INSERT INTO vulnerabilities (external_id, source, severity, summary)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (source, external_id)
+		DO UPDATE SET
+			severity = EXCLUDED.severity,
+			summary = EXCLUDED.summary
+		RETURNING id
+	`
+
+	var id string
+	if err := r.db.QueryRowContext(
+		ctx,
+		query,
+		vulnerability.ExternalID,
+		vulnerability.Source,
+		vulnerability.Severity,
+		vulnerability.Summary,
+	).Scan(&id); err != nil {
+		return "", fmt.Errorf("find or create vulnerability: %w", err)
+	}
+
+	return id, nil
+}
+
+func (r *Repository) FindOrCreateFinding(ctx context.Context, finding model.Finding) (string, error) {
+	const query = `
+		INSERT INTO findings (scan_id, component_version_id, vulnerability_id, fixed_version, status)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (scan_id, component_version_id, vulnerability_id)
+		DO UPDATE SET
+			fixed_version = EXCLUDED.fixed_version,
+			status = EXCLUDED.status
+		RETURNING id
+	`
+
+	var id string
+	if err := r.db.QueryRowContext(
+		ctx,
+		query,
+		finding.ScanID,
+		finding.ComponentVersionID,
+		finding.VulnerabilityID,
+		finding.FixedVersion,
+		finding.Status,
+	).Scan(&id); err != nil {
+		return "", fmt.Errorf("find or create finding: %w", err)
+	}
+
+	return id, nil
+}

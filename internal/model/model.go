@@ -36,3 +36,28 @@ type NormalizedArtifact struct {
 	Component        Component
 	ComponentVersion ComponentVersion
 }
+
+type Vulnerability struct {
+	ID         string
+	ExternalID string
+	Source     string
+	Severity   string
+	Summary    string
+}
+
+type Finding struct {
+	ID               string
+	ScanID           string
+	ComponentVersionID string
+	VulnerabilityID  string
+	FixedVersion     string
+	Status           string
+}
+
+type ScanPackage struct {
+	ComponentVersionID string
+	Name               string
+	Ecosystem          string
+	Version            string
+	PURL               string
+}

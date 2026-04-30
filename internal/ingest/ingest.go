@@ -8,22 +8,23 @@ import (
 	"supplygraph/internal/db"
 	"supplygraph/internal/model"
 	"supplygraph/internal/osv"
+	"supplygraph/internal/severity"
 	"supplygraph/internal/syft"
 )
 
 type InventoryResult struct {
-	NormalizedArtifacts       int
-	ComponentUpserts          int
-	ComponentVersionUpserts   int
-	ScanMembershipUpserts     int
+	NormalizedArtifacts     int
+	ComponentUpserts        int
+	ComponentVersionUpserts int
+	ScanMembershipUpserts   int
 }
 
 type EnrichmentResult struct {
-	PackagesChecked           int
-	PackagesWithVulns         int
-	TotalVulnerabilities      int
-	VulnerabilitiesPersisted  int
-	FindingsPersisted         int
+	PackagesChecked          int
+	PackagesWithVulns        int
+	TotalVulnerabilities     int
+	VulnerabilitiesPersisted int
+	FindingsPersisted        int
 }
 
 func PersistInventory(
@@ -115,16 +116,19 @@ func EnrichScanWithOSV(
 		result.TotalVulnerabilities += len(response.Vulns)
 
 		for _, vuln := range response.Vulns {
-			severity := ""
+			rawSeverity := ""
 			if len(vuln.Severity) > 0 {
-				severity = vuln.Severity[0].Score
+				rawSeverity = vuln.Severity[0].Score
 			}
+			normalizedSeverity := severity.Normalize(rawSeverity)
 
 			vulnerabilityID, err := repo.FindOrCreateVulnerability(ctx, model.Vulnerability{
-				ExternalID: vuln.ID,
-				Source:     "osv",
-				Severity:   severity,
-				Summary:    vuln.Summary,
+				ExternalID:    vuln.ID,
+				Source:        "osv",
+				Severity:      normalizedSeverity.Raw,
+				SeverityScore: normalizedSeverity.Score,
+				SeverityLabel: normalizedSeverity.Label,
+				Summary:       vuln.Summary,
 			})
 			if err != nil {
 				return EnrichmentResult{}, fmt.Errorf("persist vulnerability %q: %w", vuln.ID, err)

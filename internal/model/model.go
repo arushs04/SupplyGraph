@@ -38,20 +38,22 @@ type NormalizedArtifact struct {
 }
 
 type Vulnerability struct {
-	ID         string
-	ExternalID string
-	Source     string
-	Severity   string
-	Summary    string
+	ID            string
+	ExternalID    string
+	Source        string
+	Severity      string
+	SeverityScore *float64
+	SeverityLabel string
+	Summary       string
 }
 
 type Finding struct {
-	ID               string
-	ScanID           string
+	ID                 string
+	ScanID             string
 	ComponentVersionID string
-	VulnerabilityID  string
-	FixedVersion     string
-	Status           string
+	VulnerabilityID    string
+	FixedVersion       string
+	Status             string
 }
 
 type ScanPackage struct {
@@ -60,4 +62,50 @@ type ScanPackage struct {
 	Ecosystem          string
 	Version            string
 	PURL               string
+}
+
+type ExpandedFinding struct {
+	Finding          Finding
+	Vulnerability    Vulnerability
+	ComponentVersion ComponentVersion
+	Component        Component
+}
+
+type ScanSummary struct {
+	ScanID                 string
+	TotalFindings          int
+	UniqueVulnerabilities  int
+	UniquePackagesAffected int
+	EcosystemCounts        map[string]int
+	SeverityCounts         map[string]int
+}
+
+type AssetSummary struct {
+	AssetID                string
+	TotalScans             int
+	LatestScanID           string
+	TotalFindings          int
+	UniqueVulnerabilities  int
+	UniquePackagesAffected int
+	EcosystemCounts        map[string]int
+	SeverityCounts         map[string]int
+}
+
+type FindingsFilter struct {
+	Limit                   int
+	Offset                  int
+	Ecosystem               string
+	Package                 string
+	Status                  string
+	VulnerabilityExternalID string
+	SeverityLabel           string
+	SortBy                  string
+	Order                   string
+}
+
+type FindingsPage struct {
+	Items  []ExpandedFinding
+	Total  int
+	Limit  int
+	Offset int
 }

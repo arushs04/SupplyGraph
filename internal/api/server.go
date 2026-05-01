@@ -1,8 +1,10 @@
 package api
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +14,9 @@ import (
 	"supplygraph/internal/model"
 	"supplygraph/internal/scanjobs"
 )
+
+//go:embed web/*
+var webFS embed.FS
 
 type Server struct {
 	repo   *db.Repository
@@ -36,6 +41,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) routes() {
+	webRoot, err := fs.Sub(webFS, "web")
+	if err != nil {
+		panic(fmt.Sprintf("load embedded web assets: %v", err))
+	}
+
+	s.mux.Handle("/", http.FileServer(http.FS(webRoot)))
+	s.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(webRoot))))
 	s.mux.HandleFunc("/assets", s.handleAssets)
 	s.mux.HandleFunc("/assets/", s.handleAssetByID)
 	s.mux.HandleFunc("/scan-jobs", s.handleScanJobs)

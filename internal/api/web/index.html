@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SupplyGraph</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Software Supply Chain Intelligence</p>
+          <h1>Paste a public GitHub repo. Get a full vulnerability picture.</h1>
+          <p class="hero-text">
+            SupplyGraph pulls the repo, runs Syft, enriches packages with OSV, normalizes severity,
+            and exposes the results through a queryable backend and MCP tools.
+          </p>
+        </div>
+        <div class="hero-aside">
+          <div class="metric-card">
+            <span class="metric-label">Workflow</span>
+            <strong>Repo URL → Scan Job → Findings → AI</strong>
+          </div>
+          <div class="metric-card accent">
+            <span class="metric-label">What you can do</span>
+            <strong>Submit, track, filter, summarize, explain</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel submit-panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Start a scan</p>
+              <h2>Scan a public GitHub repository</h2>
+            </div>
+          </div>
+          <form id="scan-form" class="scan-form">
+            <label for="repo-url">Repository URL</label>
+            <div class="scan-input-row">
+              <input
+                id="repo-url"
+                name="repo-url"
+                type="url"
+                placeholder="https://github.com/argoproj/argo-cd"
+                required
+              />
+              <button type="submit" id="scan-submit">Launch Scan</button>
+            </div>
+            <p class="hint">
+              Public <code>github.com</code> repos only in this version. The backend downloads the tarball,
+              runs Syft, stores inventory, enriches with OSV, and exposes the data through REST and MCP.
+            </p>
+          </form>
+          <div id="submit-error" class="inline-error hidden"></div>
+        </section>
+
+        <section class="panel progress-panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Job tracking</p>
+              <h2>Current scan job</h2>
+            </div>
+            <span id="job-status-badge" class="status-badge neutral">Idle</span>
+          </div>
+          <div id="job-empty" class="empty-state">
+            Start a scan to watch backend progress here.
+          </div>
+          <div id="job-details" class="job-details hidden">
+            <div class="job-grid">
+              <div>
+                <span class="meta-label">Repo</span>
+                <strong id="job-repo-name">-</strong>
+                <p id="job-repo-url" class="meta-value"></p>
+              </div>
+              <div>
+                <span class="meta-label">Job ID</span>
+                <strong id="job-id">-</strong>
+              </div>
+              <div>
+                <span class="meta-label">Created</span>
+                <strong id="job-created-at">-</strong>
+              </div>
+              <div>
+                <span class="meta-label">Started</span>
+                <strong id="job-started-at">-</strong>
+              </div>
+            </div>
+            <div class="timeline">
+              <div class="timeline-step" data-step="pending">Queued</div>
+              <div class="timeline-step" data-step="running">Scanning</div>
+              <div class="timeline-step" data-step="completed">Completed</div>
+            </div>
+            <div id="job-error" class="inline-error hidden"></div>
+          </div>
+        </section>
+
+        <section class="panel recent-panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Recent activity</p>
+              <h2>Latest scan jobs</h2>
+            </div>
+            <button id="refresh-jobs" class="ghost-button" type="button">Refresh</button>
+          </div>
+          <div id="recent-jobs" class="job-list"></div>
+        </section>
+
+        <section id="results-panel" class="panel results-panel hidden">
+          <div class="panel-header results-header">
+            <div>
+              <p class="section-kicker">Scan results</p>
+              <h2 id="results-title">Repository results</h2>
+            </div>
+            <div class="result-links">
+              <span id="results-asset-id" class="pill"></span>
+              <span id="results-scan-id" class="pill"></span>
+            </div>
+          </div>
+
+          <div class="summary-grid">
+            <article class="summary-card">
+              <span class="summary-label">Asset summary</span>
+              <strong id="asset-total-findings">-</strong>
+              <p id="asset-summary-caption">Total findings across scans</p>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Latest scan findings</span>
+              <strong id="scan-total-findings">-</strong>
+              <p id="scan-summary-caption">Findings in this scan</p>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Unique vulnerabilities</span>
+              <strong id="scan-unique-vulns">-</strong>
+              <p>Per current scan</p>
+            </article>
+            <article class="summary-card accent">
+              <span class="summary-label">AI-ready surface</span>
+              <strong>MCP Connected</strong>
+              <p>These results map directly to your MCP tools.</p>
+            </article>
+          </div>
+
+          <div class="severity-section">
+            <div>
+              <p class="section-kicker">Severity distribution</p>
+              <h3>Normalized vulnerability buckets</h3>
+            </div>
+            <div id="severity-bars" class="severity-bars"></div>
+          </div>
+
+          <div class="findings-controls">
+            <div class="control">
+              <label for="severity-filter">Severity</label>
+              <select id="severity-filter">
+                <option value="">All</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="none">None</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="package-filter">Package</label>
+              <input id="package-filter" type="text" placeholder="axios" />
+            </div>
+            <div class="control">
+              <label for="sort-filter">Sort by</label>
+              <select id="sort-filter">
+                <option value="severity">Severity</option>
+                <option value="package">Package</option>
+                <option value="vulnerability">Vulnerability</option>
+                <option value="version">Version</option>
+                <option value="id">ID</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="order-filter">Order</label>
+              <select id="order-filter">
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
+            <button id="apply-filters" type="button">Apply</button>
+          </div>
+
+          <div id="findings-meta" class="findings-meta"></div>
+          <div id="findings-list" class="findings-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

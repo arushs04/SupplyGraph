@@ -147,16 +147,25 @@ func extractTarGz(r io.Reader, destination string) (string, error) {
 			return "", fmt.Errorf("read tar entry: %w", err)
 		}
 
+		switch header.Typeflag {
+		case tar.TypeXGlobalHeader, tar.TypeXHeader:
+			continue
+		}
+
 		targetPath := filepath.Join(destination, header.Name)
 		cleanTarget := filepath.Clean(targetPath)
 		if !strings.HasPrefix(cleanTarget, filepath.Clean(destination)+string(os.PathSeparator)) && cleanTarget != filepath.Clean(destination) {
 			return "", fmt.Errorf("tar entry escapes destination: %q", header.Name)
 		}
 
+		trimmedName := strings.TrimPrefix(header.Name, "./")
 		if rootDir == "" {
-			topLevel := strings.Split(strings.TrimPrefix(header.Name, "./"), "/")[0]
-			if topLevel != "" {
-				rootDir = filepath.Join(destination, topLevel)
+			slashIndex := strings.Index(trimmedName, "/")
+			if slashIndex > 0 {
+				topLevel := trimmedName[:slashIndex]
+				if topLevel != "" && topLevel != "pax_global_header" {
+					rootDir = filepath.Join(destination, topLevel)
+				}
 			}
 		}
 
@@ -180,11 +189,21 @@ func extractTarGz(r io.Reader, destination string) (string, error) {
 			if err := file.Close(); err != nil {
 				return "", fmt.Errorf("close file %q: %w", cleanTarget, err)
 			}
+		case tar.TypeSymlink, tar.TypeLink:
+			continue
 		}
 	}
 
 	if rootDir == "" {
 		return "", fmt.Errorf("tarball did not contain a repository directory")
+	}
+
+	rootInfo, err := os.Stat(rootDir)
+	if err != nil {
+		return "", fmt.Errorf("stat extracted repo root %q: %w", rootDir, err)
+	}
+	if !rootInfo.IsDir() {
+		return "", fmt.Errorf("extracted repo root %q is not a directory", rootDir)
 	}
 
 	return rootDir, nil

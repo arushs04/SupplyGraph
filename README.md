@@ -16,6 +16,7 @@ The project currently supports:
 - persisting vulnerabilities and findings into PostgreSQL
 - exposing read APIs over REST
 - exposing read tools over MCP (stdio)
+- serving a browser UI for repo submission, job tracking, and findings review
 
 The project does not yet support:
 
@@ -85,7 +86,11 @@ go run ./cmd/ingest /Users/arushsacheti/Downloads/argo-cd-master/deps.json /User
 go run ./cmd/api
 ```
 
-By default the API listens on `:8080`.
+By default the API listens on `:8080` and now also serves the web UI at:
+
+```text
+http://localhost:8080/
+```
 
 ### Run the MCP server
 
@@ -141,6 +146,23 @@ Poll a job:
 ```bash
 curl http://localhost:8080/scan-jobs/<job-id>
 ```
+
+### Browser workflow
+
+Open:
+
+```text
+http://localhost:8080/
+```
+
+The UI supports:
+
+- submit a public GitHub repo URL
+- watch scan job progress
+- inspect recent jobs
+- review normalized severity summaries
+- filter findings by severity and package
+- sort findings by severity, package, vulnerability, version, or ID
 
 Filtering and pagination for findings endpoints:
 

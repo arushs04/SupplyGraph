@@ -1,11 +1,13 @@
 package scanjobs
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"supplygraph/internal/db"
@@ -170,15 +172,18 @@ func (r *Runner) failJob(ctx context.Context, jobID string, err error) {
 }
 
 func runSyft(ctx context.Context, sourceDir string) (syft.Document, error) {
-	cmd := exec.CommandContext(ctx, "syft", sourceDir, "-o", "json")
-	output, err := cmd.CombinedOutput()
+	cmd := exec.CommandContext(ctx, "syft", "-q", sourceDir, "-o", "json")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	output, err := cmd.Output()
 	if err != nil {
-		return syft.Document{}, fmt.Errorf("run syft: %w: %s", err, string(output))
+		return syft.Document{}, fmt.Errorf("run syft: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 
 	doc, err := syft.LoadDocumentBytes(output)
 	if err != nil {
-		return syft.Document{}, fmt.Errorf("parse syft output: %w", err)
+		return syft.Document{}, fmt.Errorf("parse syft output: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 
 	return doc, nil

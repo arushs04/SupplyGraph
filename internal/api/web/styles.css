@@ -269,6 +269,19 @@ button:hover {
   margin-bottom: 18px;
 }
 
+.job-grid > div,
+.job-card-top > div {
+  min-width: 0;
+}
+
+.job-grid strong,
+.job-grid .meta-value,
+.job-card strong,
+.job-card .meta-value {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .timeline {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -356,6 +369,51 @@ button:hover {
   padding: 14px 16px;
   line-height: 1.55;
   white-space: pre-wrap;
+}
+
+.chat-body {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-body > * {
+  margin: 0;
+}
+
+.chat-body h3,
+.chat-body h4,
+.chat-body h5 {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  line-height: 1.15;
+}
+
+.chat-body h3 {
+  font-size: 1.05rem;
+}
+
+.chat-body h4,
+.chat-body h5 {
+  font-size: 0.98rem;
+}
+
+.chat-body p {
+  color: inherit;
+}
+
+.chat-body ol,
+.chat-body ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 8px;
+}
+
+.chat-body li {
+  padding-left: 2px;
+}
+
+.chat-body strong {
+  font-weight: 800;
 }
 
 .chat-message.user {

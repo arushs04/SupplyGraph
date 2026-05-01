@@ -393,7 +393,7 @@ function appendChatMessage(role, content) {
   message.className = `chat-message ${role}`;
   message.innerHTML = `
     <span class="chat-role">${role === "user" ? "You" : "SupplyGraph AI"}</span>
-    ${escapeHTML(content)}
+    <div class="chat-body">${formatChatContent(content)}</div>
   `;
   elements.chatMessages.appendChild(message);
   elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
@@ -414,6 +414,80 @@ function showError(element, message) {
 function hideError(element) {
   element.textContent = "";
   element.classList.add("hidden");
+}
+
+function formatChatContent(content) {
+  const lines = String(content || "").replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  let paragraph = [];
+  let listItems = [];
+  let listType = null;
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+    blocks.push(`<p>${formatInline(paragraph.join(" "))}</p>`);
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!listItems.length || !listType) return;
+    const items = listItems.map((item) => `<li>${formatInline(item)}</li>`).join("");
+    blocks.push(`<${listType}>${items}</${listType}>`);
+    listItems = [];
+    listType = null;
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(headingMatch[1].length + 2, 5);
+      blocks.push(`<h${level}>${formatInline(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+
+    const orderedMatch = line.match(/^\d+\.\s+(.+)$/);
+    if (orderedMatch) {
+      flushParagraph();
+      if (listType && listType !== "ol") {
+        flushList();
+      }
+      listType = "ol";
+      listItems.push(orderedMatch[1]);
+      continue;
+    }
+
+    const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+    if (bulletMatch) {
+      flushParagraph();
+      if (listType && listType !== "ul") {
+        flushList();
+      }
+      listType = "ul";
+      listItems.push(bulletMatch[1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+
+  return blocks.join("");
+}
+
+function formatInline(text) {
+  return escapeHTML(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
 function formatDate(value) {

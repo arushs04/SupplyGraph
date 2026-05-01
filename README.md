@@ -392,14 +392,3 @@ migrations/          Schema migrations
 docker-compose.yml   Local Postgres
 ```
 
-## Final Notes
-
-RepoRadar is now in a good demo-ready state:
-
-- public repo URL in
-- automated scan pipeline
-- normalized vulnerability data out
-- REST and MCP access
-- local AI chat on top
-
-If you want to extend it further later, the next logical steps are worker separation, deployment, and stronger coverage around scan and enrichment flows.

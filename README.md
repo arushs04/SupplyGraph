@@ -2,7 +2,6 @@
 
 RepoRadar scans public repositories, generates an SBOM with Syft, normalizes package inventory into PostgreSQL, enriches npm packages with OSV vulnerability data, exposes the results through REST and MCP, and provides a local AI-assisted UI for reviewing findings.
 
-Detailed code-level notes live in [docs/IMPLEMENTATION_GUIDE.md](/Users/arushsacheti/Downloads/Arush_Job_Search/projects/SupplyGraph/docs/IMPLEMENTATION_GUIDE.md).
 
 ## What It Does
 
